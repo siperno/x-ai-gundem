@@ -1,0 +1,26 @@
+name: Tek seferlik görselli X paylaşımı
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/share-once.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: daily-buffer-publisher
+  cancel-in-progress: false
+jobs:
+  share:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install Pillow==11.3.0
+      - name: Tek gönderiyi yayınla ve teslimi doğrula
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python share_once.py

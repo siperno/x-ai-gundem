@@ -304,7 +304,7 @@ def make_card(repos, end, path):
         y = 235 + idx * 150
         d.text((92, y), clip(r['name'], 45), font=font(31), fill='#f1f7ff')
         d.text((92, y + 51), f"{r['stars']:,} YILDIZ   ·   {r['language']}", font=font(26), fill='#69e4cf')
-    d.text((92, 576), '@kuytancaglar   |   Kaynaklar paylaşım zincirinde', font=font(24), fill='#96a9c5')
+    d.text((92, 576), '@kuytancaglar   |   Kaynak bağlantıları paylaşımda', font=font(24), fill='#96a9c5')
     img.save(path)
 
 
