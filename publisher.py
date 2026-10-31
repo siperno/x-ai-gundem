@@ -222,10 +222,12 @@ def news(end):
 
 
 def repositories(end):
-    query = 'topic:artificial-intelligence stars:>=1000 archived:false fork:false'
+    query = 'topic:artificial-intelligence stars:>30000 archived:false fork:false'
     data = gh('search/repositories?' + urllib.parse.urlencode({'q': query, 'sort': 'stars', 'order': 'desc', 'per_page': 30}))
     candidates = []
     for r in data.get('items', []):
+        if r.get('stargazers_count', 0) <= 30000:
+            continue
         # Recent activity is not claimed to be a new release or star growth.
         if parsed_date(r['pushed_at']) > end or parsed_date(r['pushed_at']) < end - dt.timedelta(days=30):
             continue
