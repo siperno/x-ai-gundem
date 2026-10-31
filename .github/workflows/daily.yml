@@ -10,7 +10,7 @@ on:
       mode:
         description: 'check: bağlantı testi; preview: içerik önizleme; publish: bugünkü yayını zamanla'
         type: choice
-        options: [check, preview, publish]
+        options: [check, preview, draft, publish]
         default: check
 permissions:
   contents: write

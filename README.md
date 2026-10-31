@@ -36,12 +36,15 @@ Tek sır: Settings → Secrets and variables → Actions → `BUFFER_API_KEY`.
 Anahtarı koda, README'ye, loga veya sohbete yazmayın. Personal key'de hesap/kanal okuma,
 gönderi okuma ve gönderi oluşturma/yazma izinleri gerekir. Gereksiz silme izinleri gerekmez.
 API `https://api.buffer.com` GraphQL, Bearer kimlik doğrulaması kullanır.
+Gerekli Personal key izinleri: `accountRead`, `postsRead`, `postsWrite`.
+Anahtarın son kullanma tarihinden önce aynı GitHub secret güncellenmelidir; Buffer süreli anahtarlar kullanır.
 `@kuytancaglar` X kimliği tekil eşleşmezse yayın durur.
 GitHub'ın geçici `GITHUB_TOKEN` değeri otomatik sağlanır; ayrı GitHub PAT gerekmez.
 
 Actions → AI gündemi → Run workflow:
 - `check`: kanal ve okuma yetkilerini doğrular, yayın oluşturmaz.
 - `preview`: haber, çeviri ve kart oluşturur; yalnızca 3 günlük artifact kaydeder.
+- `draft`: içeriği Buffer'a yayınlanmayan taslak olarak göndererek yazma/görsel/zincir uyumunu test eder.
 - `publish`: yalnızca 07:30–09:30 Berlin aralığında bugünkü yayını zamanlar.
 
 Otomatik schedule aktiftir; secret hazır olduğunda sonraki sabah çalışır.

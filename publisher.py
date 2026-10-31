@@ -293,17 +293,18 @@ def run():
     Path('out/preview.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2))
     make_card(repos, end, 'out/card.png')
     print(f'{len(items)} güncel haber ve {len(repos)} repo hazırlandı. İçerik out/preview.json dosyasında.')
-    if mode != 'publish':
+    if mode not in ('publish', 'draft'):
         print('Önizleme: Buffer’a hiçbir gönderi oluşturulmadı.')
         return
     # Publish only today's current facts; severe delays never queue yesterday's digest.
     current = now()
-    if current > due + dt.timedelta(hours=1):
+    if mode == 'publish' and current > due + dt.timedelta(hours=1):
         raise RuntimeError('Hazırlık fazla gecikti; bugünkü yayın iptal edildi')
     publish_at = max(due.astimezone(UTC), current + dt.timedelta(minutes=3))
     image_url = None
     try:
-        image_path = f'media/{due.date()}.png'
+        image_hash = hashlib.sha256(Path('out/card.png').read_bytes()).hexdigest()[:12]
+        image_path = f'media/{due.date()}-{image_hash}.png'
         result = put_file(image_path, Path('out/card.png').read_bytes())
         image_url = f'https://raw.githubusercontent.com/{repo()}/{result["commit"]["sha"]}/{image_path}'
         request(image_url, raw=True)
@@ -316,6 +317,18 @@ def run():
     payload = {'text': posts[0], 'channelId': cid, 'schedulingType': 'automatic',
                'mode': 'customScheduled', 'dueAt': publish_at.isoformat(),
                'metadata': {'twitter': {'thread': thread}}}
+    if mode == 'draft':
+        payload['saveToDraft'] = True
+        payload['mode'] = 'addToQueue'
+        payload.pop('dueAt')
+        result = gql('mutation($input: CreatePostInput!) { createPost(input: $input) { '
+                     '... on PostActionSuccess { post { id status } } '
+                     '... on MutationError { message } } }', {'input': payload})['createPost']
+        if 'post' not in result:
+            raise RuntimeError('Buffer taslak oluşturmayı reddetti')
+        Path('out/buffer-result.json').write_text(json.dumps(result['post']))
+        print('Buffer yazma yetkisi doğrulandı; zincir taslağı oluşturuldu, X yayını yapılmadı.')
+        return
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
     record = {'date': str(due.date()), 'status': 'attempting', 'due_at': publish_at.isoformat(),
               'digest': digest, 'run_id': os.environ.get('GITHUB_RUN_ID')}
