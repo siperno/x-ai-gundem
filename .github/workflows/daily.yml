@@ -1,0 +1,53 @@
+name: AI gündemi — Berlin 08.30
+on:
+  schedule:
+    - cron: '47 7 * * *'
+      timezone: Europe/Berlin
+    - cron: '12 8 * * *'
+      timezone: Europe/Berlin
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check: bağlantı testi; preview: içerik önizleme; publish: bugünkü yayını zamanla'
+        type: choice
+        options: [check, preview, publish]
+        default: check
+permissions:
+  contents: write
+concurrency:
+  group: daily-buffer-publisher
+  cancel-in-progress: false
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Bağlantı ve günlük kayıt kontrolü
+        id: gate
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          RUN_MODE: ${{ inputs.mode || 'publish' }}
+        run: python publisher.py gate
+      - name: Ücretsiz yerel çeviri ve kart araçları
+        if: steps.gate.outputs.proceed == 'true'
+        run: pip install --disable-pip-version-check -r requirements.txt
+      - name: Haberleri hazırla ve Buffer'a zamanla
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          RUN_MODE: ${{ inputs.mode || 'publish' }}
+        run: python publisher.py run
+      - name: Önizleme ve kaynak kayıtları
+        if: always() && steps.gate.outputs.proceed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gundem-${{ github.run_id }}
+          path: out/
+          retention-days: 3
+          if-no-files-found: ignore
