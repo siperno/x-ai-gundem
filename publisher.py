@@ -284,28 +284,7 @@ def weighted_length(text):
     return sum(1 if ord(c) <= 0x10ff else 2 for c in replaced)
 
 
-def make_card(repos, end, path):
-    from PIL import Image, ImageDraw, ImageFont
-    img = Image.new('RGB', (1200, 675), '#080e20')
-    d = ImageDraw.Draw(img)
-    font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-    if not Path(font_path).exists():
-        font_path = '/System/Library/Fonts/Supplemental/Arial.ttf'
-    def font(size):
-        return ImageFont.truetype(font_path, size)
-    for x in range(0, 1200, 60):
-        d.line((x, 0, x, 675), fill='#132039')
-    for y in range(0, 675, 60):
-        d.line((0, y, 1200, y), fill='#132039')
-    d.rounded_rectangle((55, 46, 1145, 630), radius=30, fill='#111c32', outline='#31567a', width=2)
-    d.text((90, 74), 'AI GÜNDEMİ', font=font(62), fill='#f1f7ff')
-    d.text((92, 155), end.astimezone(BERLIN).strftime('%d.%m.%Y') + '  /  GITHUB KEŞİFLERİ', font=font(25), fill='#69e4cf')
-    for idx, r in enumerate(repos):
-        y = 235 + idx * 150
-        d.text((92, y), clip(r['name'], 45), font=font(31), fill='#f1f7ff')
-        d.text((92, y + 51), f"{r['stars']:,} YILDIZ   ·   {r['language']}", font=font(26), fill='#69e4cf')
-    d.text((92, 576), '@kuytancaglar   |   Kaynak bağlantıları paylaşımda', font=font(24), fill='#96a9c5')
-    img.save(path)
+from visual_style import make_card
 
 
 def run():

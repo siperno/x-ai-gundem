@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 import publisher as p
 
-STATE = 'state/manual-example-2026-10-31.json'
+STATE = 'state/manual-approved-style-2026-10-31.json'
 
 
 def main():
@@ -16,15 +16,17 @@ def main():
         return
     org, cid = p.channel()
     moment = p.now()
-    repos = p.repositories(moment)
-    text = 'Açık kaynak AI araçları keşfi!\n\n' + '\n\n'.join(
-        f"{r['name']} · {r['stars']:,} yıldız\n{r['url']}" for r in repos
-    ) + '\n\nYıldızlar güncel toplam sayıdır. #YapayZeka'
+    text = ('AÇIK KAYNAK AI\n\n'
+            'spaCy: Python ile metin analizi ve kişi/kurum tanıma.\n'
+            'https://github.com/explosion/spaCy\n\n'
+            'PyTorch Lightning: Daha az tekrar koduyla model eğitimi ve çoklu GPU desteği.\n'
+            'https://github.com/Lightning-AI/pytorch-lightning\n\n'
+            '#YapayZeka #GitHub')
     if p.weighted_length(text) > 280:
         raise RuntimeError('Karakter sınırı aşıldı')
     Path('out').mkdir(exist_ok=True)
-    p.make_card(repos, moment, 'out/manual.png')
-    image_path = 'media/manual-' + os.environ['GITHUB_RUN_ID'] + '.png'
+    Path('out/manual.png').write_bytes(Path('assets/approved-example.jpg').read_bytes())
+    image_path = 'media/manual-' + os.environ['GITHUB_RUN_ID'] + '.jpg'
     uploaded = p.put_file(image_path, Path('out/manual.png').read_bytes())
     url = f'https://raw.githubusercontent.com/{p.repo()}/{uploaded["commit"]["sha"]}/{image_path}'
     p.request(url, raw=True)
