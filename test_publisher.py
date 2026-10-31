@@ -47,5 +47,20 @@ class PublishingTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 p.channel()
 
+    def test_delivery_failure_is_not_marked_sent(self):
+        record = {'status': 'scheduled', 'post_id': 'post1'}
+        response = {'posts': {'edges': [{'node': {'id': 'post1', 'status': 'error'}}], 'pageInfo': {'hasNextPage': False}}}
+        with patch.object(p, 'get_file', return_value=(record, 'sha')), patch.object(p, 'channel', return_value=('org', 'channel')), patch.object(p, 'gql', return_value=response), patch.object(p, 'put_file') as write:
+            with self.assertRaises(RuntimeError):
+                p.verify_delivery()
+            write.assert_not_called()
+
+    def test_delivery_success_is_recorded(self):
+        record = {'status': 'scheduled', 'post_id': 'post1'}
+        response = {'posts': {'edges': [{'node': {'id': 'post1', 'status': 'sent'}}], 'pageInfo': {'hasNextPage': False}}}
+        with patch.object(p, 'get_file', return_value=(record, 'sha')), patch.object(p, 'channel', return_value=('org', 'channel')), patch.object(p, 'gql', return_value=response), patch.object(p, 'put_file') as write:
+            p.verify_delivery()
+            self.assertEqual(p.json.loads(write.call_args.args[1])['status'], 'sent')
+
 if __name__ == '__main__':
     unittest.main()

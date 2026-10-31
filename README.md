@@ -6,6 +6,7 @@ Mac kapalıyken GitHub ve Buffer sunucularında çalışır. Ücretli AI API'si 
 ## Zamanlama
 
 Hazırlık her gün **07:47 Europe/Berlin**, yedek deneme **08:12**. Buffer hedef yayın saati **08:30**.
+**09:45** kontrolü Buffer'ın `sent` teslim durumunu doğrular; eksik/hatalı yayında Actions çalışması hata verir.
 IANA saat dilimi ve Python zoneinfo yaz/kış saatini otomatik uygular.
 GitHub Actions kesin zaman garantisi vermez: geç başlayan çalışma 09:30'a kadar güncel verilerle
 3 dakika sonrasına zamanlanır. Daha geçse yayın yapılmaz. 08:30'dan sonra başlayan koşu geç yayınlanır.
@@ -46,13 +47,15 @@ Actions → AI gündemi → Run workflow:
 - `preview`: haber, çeviri ve kart oluşturur; yalnızca 3 günlük artifact kaydeder.
 - `draft`: içeriği Buffer'a yayınlanmayan taslak olarak göndererek yazma/görsel/zincir uyumunu test eder.
 - `publish`: yalnızca 07:30–09:30 Berlin aralığında bugünkü yayını zamanlar.
+- `verify`: bugünkü Buffer gönderisinin teslim durumunu kontrol eder.
 
 Otomatik schedule aktiftir; secret hazır olduğunda sonraki sabah çalışır.
 `state/YYYY-MM-DD.json` kalıcı günlük kayıtları tekrarlı paylaşımı önler.
 `attempting` kaydı kalırsa önce Buffer'da sonucu kontrol edin. Gönderi oluşmadığı kesinleşmeden
 kaydı silmeyin: ağ zaman aşımında sunucu gönderiyi oluşturmuş olabilir.
 `scheduled`, Buffer'ın kabul ettiğini gösterir; X'e teslim edildiğini garanti etmez.
-Gönderinin son teslim durumunu Buffer kuyruğundan ve hata bildirimlerinden takip edin.
+09:45 kontrolü gönderinin son teslim durumunu Buffer'dan okur. Hatalarda GitHub Actions bildirim
+tercihleriniz geçerlidir; ayrıca Buffer kuyruğu ve hata bildirimlerini kontrol edebilirsiniz.
 
 ## Ücretsiz sınırlar
 

@@ -5,12 +5,14 @@ on:
       timezone: Europe/Berlin
     - cron: '12 8 * * *'
       timezone: Europe/Berlin
+    - cron: '45 9 * * *'
+      timezone: Europe/Berlin
   workflow_dispatch:
     inputs:
       mode:
         description: 'check: bağlantı testi; preview: içerik önizleme; publish: bugünkü yayını zamanla'
         type: choice
-        options: [check, preview, draft, publish]
+        options: [check, preview, draft, publish, verify]
         default: check
 permissions:
   contents: write
@@ -31,7 +33,7 @@ jobs:
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
-          RUN_MODE: ${{ inputs.mode || 'publish' }}
+          RUN_MODE: ${{ github.event.schedule == '45 9 * * *' && 'verify' || inputs.mode || 'publish' }}
         run: python publisher.py gate
       - name: Ücretsiz yerel çeviri ve kart araçları
         if: steps.gate.outputs.proceed == 'true'
@@ -43,6 +45,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           RUN_MODE: ${{ inputs.mode || 'publish' }}
         run: python publisher.py run
+      - name: Ücretsiz Türkçe çeviri modeli kontrolü
+        if: steps.gate.outputs.proceed == 'true' && inputs.mode == 'preview'
+        run: python publisher.py translation-check
       - name: Önizleme ve kaynak kayıtları
         if: always() && steps.gate.outputs.proceed == 'true'
         uses: actions/upload-artifact@v4

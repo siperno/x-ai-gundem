@@ -108,6 +108,9 @@ def channel():
 
 def gate():
     mode = os.environ.get('RUN_MODE', 'preview')
+    if mode == 'verify':
+        verify_delivery()
+        return
     moment = now()
     due = target_time(moment)
     if mode == 'publish' and not (due - dt.timedelta(minutes=60) <= moment <= due + dt.timedelta(minutes=60)):
@@ -115,7 +118,7 @@ def gate():
         return
     state, _ = get_file(f'state/{due.date()}.json')
     if mode == 'publish' and state:
-        if state['status'] == 'scheduled':
+        if state['status'] in ('scheduled', 'sent'):
             print('Bugünkü yayın zaten Buffer’a iletildi; tekrar oluşturulmadı.')
             return
         raise RuntimeError('Önceki yayın denemesinin sonucu belirsiz; Buffer kontrol edilmeden tekrar gönderilmeyecek')
@@ -131,6 +134,32 @@ def gate():
     if os.environ.get('GITHUB_OUTPUT'):
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
             f.write('proceed=true\n')
+
+
+def verify_delivery():
+    day = target_time(now()).date()
+    record, sha = get_file(f'state/{day}.json')
+    if not record or record.get('status') not in ('scheduled', 'sent'):
+        raise RuntimeError('Bugünkü yayın Buffer’a ulaşmamış veya sonucu belirsiz; Actions/Buffer kontrol edilmeli')
+    org, cid = channel()
+    cursor = None
+    for _ in range(5):
+        after = ', after: ' + json.dumps(cursor) if cursor else ''
+        result = gql('query { posts(first: 100' + after + ', input: {organizationId: ' + json.dumps(org) +
+                     ', filter: {channelIds: [' + json.dumps(cid) + ']}}) { edges { node { id status } } '
+                     'pageInfo { hasNextPage endCursor } } }')['posts']
+        for edge in result['edges']:
+            if edge['node']['id'] == record['post_id']:
+                if edge['node']['status'] != 'sent':
+                    raise RuntimeError('Buffer bugünkü gönderiyi henüz sent olarak bildirmiyor; kuyruğu kontrol edin')
+                record.update(status='sent', verified_at=now().isoformat())
+                put_file(f'state/{day}.json', json.dumps(record).encode(), sha)
+                print('Buffer bugünkü gönderinin X’e gönderildiğini doğruladı.')
+                return
+        if not result['pageInfo']['hasNextPage']:
+            break
+        cursor = result['pageInfo']['endCursor']
+    raise RuntimeError('Bugünkü Buffer gönderisi bulunamadı; manuel kontrol gerekiyor')
 
 
 def parsed_date(value):
@@ -223,6 +252,13 @@ def translator():
 
 def clip(value, length):
     return value if len(value) <= length else value[:length-1].rsplit(' ', 1)[0] + '…'
+
+
+def translation_check():
+    translated = translator()('A new artificial intelligence model is available.')
+    if not translated or translated == 'A new artificial intelligence model is available.':
+        raise RuntimeError('İngilizce-Türkçe çeviri kontrolü başarısız')
+    print('Çeviri modeli kontrol edildi: ' + translated)
 
 
 def build_posts(items, repos, end, translate):
@@ -347,7 +383,7 @@ def run():
 
 if __name__ == '__main__':
     try:
-        {'gate': gate, 'run': run}[sys.argv[1]]()
+        {'gate': gate, 'run': run, 'translation-check': translation_check}[sys.argv[1]]()
     except Exception as exc:
         # Do not print traceback, request headers, tokens, or remote response bodies.
         if isinstance(exc, RuntimeError):
