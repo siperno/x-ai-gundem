@@ -1,0 +1,26 @@
+name: AI haber — doğrulanmış tek seferlik paylaşım
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/share-news-2026-11-02.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: daily-buffer-publisher
+  cancel-in-progress: false
+jobs:
+  share:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --disable-pip-version-check 'Pillow>=10,<12'
+      - name: Haber ve görseli Buffer üzerinden X'e gönder, teslimi doğrula
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python share_news_2026_11_02.py
