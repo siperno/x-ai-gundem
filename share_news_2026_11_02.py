@@ -65,7 +65,7 @@ def main():
         print("Bu haber için yayın girişimi zaten mevcut; tekrar paylaşılmıyor.")
         return
     daily, _ = p.get_file(DAILY)
-    if daily and daily.get("status") in ("attempting", "scheduled", "sent"):
+    if daily is not None:
         print("Bugünkü otomatik yayın kaydı var; ikinci gönderi oluşturulmadı.")
         return
     if p.weighted_length(TEXT) > 280:
@@ -86,12 +86,20 @@ def main():
     record = {"status": "attempting", "source": SOURCE, "text": TEXT,
               "requested_at": p.now().isoformat()}
     reservation = p.put_file(STATE, json.dumps(record, ensure_ascii=False).encode())
+    # Both publishers reserve the same day before any external write.
+    # Creating without a SHA fails if another publisher already owns the day.
+    daily_record = dict(record, date="2026-11-02", origin="verified-ai-news-2026-11-02")
+    daily_sha = p.put_file(DAILY, json.dumps(daily_record, ensure_ascii=False).encode())["content"]["sha"]
     result = p.gql('mutation($input: CreatePostInput!) { createPost(input: $input) { '
                    '... on PostActionSuccess { post { id status externalLink } } '
                    '... on MutationError { message } } }', {"input": payload})["createPost"]
     if "post" not in result:
         raise RuntimeError("Buffer gönderiyi reddetti; otomatik yeniden deneme yapılmadı")
     record.update(result["post"])
+    daily_record.update(status=record["status"], post_id=record["id"],
+                        externalLink=record.get("externalLink"))
+    daily_sha = p.put_file(DAILY, json.dumps(daily_record, ensure_ascii=False).encode(),
+                          daily_sha)["content"]["sha"]
     sha = p.put_file(STATE, json.dumps(record, ensure_ascii=False).encode(),
                      reservation["content"]["sha"])["content"]["sha"]
     for _ in range(18):
@@ -104,6 +112,10 @@ def main():
             break
         time.sleep(10)
     p.put_file(STATE, json.dumps(record, ensure_ascii=False).encode(), sha)
+    daily_record.update(status=record["status"], externalLink=record.get("externalLink"))
+    if record["status"] == "sent":
+        daily_record["verified_at"] = p.now().isoformat()
+    p.put_file(DAILY, json.dumps(daily_record, ensure_ascii=False).encode(), daily_sha)
     print(json.dumps(record, ensure_ascii=False))
     if record["status"] != "sent":
         raise RuntimeError("X teslimi doğrulanmadı; kör tekrar yayın yapılmayacak")
@@ -114,3 +126,4 @@ if __name__ == "__main__":
     except Exception as exc:
         print("Yayın denemesi güvenli şekilde durdu: " + type(exc).__name__)
         raise SystemExit(1)
+

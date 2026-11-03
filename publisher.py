@@ -113,15 +113,14 @@ def gate():
         return
     moment = now()
     due = target_time(moment)
-    if mode == 'publish' and not (due - dt.timedelta(minutes=60) <= moment <= due + dt.timedelta(minutes=60)):
-        print('Yayın penceresi dışında: yalnızca 07.30–09.30 Berlin arasında yayınlanır.')
-        return
     state, _ = get_file(f'state/{due.date()}.json')
     if mode == 'publish' and state:
         if state['status'] in ('scheduled', 'sent'):
             print('Bugünkü yayın zaten Buffer’a iletildi; tekrar oluşturulmadı.')
             return
         raise RuntimeError('Önceki yayın denemesinin sonucu belirsiz; Buffer kontrol edilmeden tekrar gönderilmeyecek')
+    if mode == 'publish' and not (due - dt.timedelta(minutes=60) <= moment <= due + dt.timedelta(minutes=60)):
+        raise RuntimeError('Yayın penceresi dışında ve günlük yayın kaydı yok; yayın yapılmadı.')
     channel()
     print('Buffer erişimi ve @kuytancaglar X kanalı doğrulandı.')
     if mode == 'check':
@@ -374,3 +373,4 @@ if __name__ == '__main__':
         else:
             print('HATA: ' + type(exc).__name__ + '; yayın güvenli biçimde durduruldu.', file=sys.stderr)
         sys.exit(1)
+
