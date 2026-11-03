@@ -119,8 +119,6 @@ def gate():
             print('Bugünkü yayın zaten Buffer’a iletildi; tekrar oluşturulmadı.')
             return
         raise RuntimeError('Önceki yayın denemesinin sonucu belirsiz; Buffer kontrol edilmeden tekrar gönderilmeyecek')
-    if mode == 'publish' and not (due - dt.timedelta(minutes=60) <= moment <= due + dt.timedelta(minutes=60)):
-        raise RuntimeError('Yayın penceresi dışında ve günlük yayın kaydı yok; yayın yapılmadı.')
     channel()
     print('Buffer erişimi ve @kuytancaglar X kanalı doğrulandı.')
     if mode == 'check':
@@ -292,8 +290,6 @@ def run():
     mode = os.environ.get('RUN_MODE', 'preview')
     end = now()
     due = target_time(end)
-    if mode == 'publish' and not (due - dt.timedelta(hours=1) <= end <= due + dt.timedelta(hours=1)):
-        raise RuntimeError('Yayın penceresi dışında')
     state_path = f'state/{due.date()}.json'
     old, _ = get_file(state_path)
     if mode == 'publish' and old:
@@ -312,10 +308,10 @@ def run():
     if mode not in ('publish', 'draft'):
         print('Önizleme: Buffer’a hiçbir gönderi oluşturulmadı.')
         return
-    # Publish only today's current facts; severe delays never queue yesterday's digest.
+    # Delayed runners prepare fresh content for today instead of missing the day.
     current = now()
-    if mode == 'publish' and current > due + dt.timedelta(hours=1):
-        raise RuntimeError('Hazırlık fazla gecikti; bugünkü yayın iptal edildi')
+    if mode == 'publish' and current.astimezone(BERLIN).date() != due.date():
+        raise RuntimeError('Hazırlık sırasında Berlin tarihi değişti; yeni gün için yeniden hazırlayın')
     publish_at = max(due.astimezone(UTC), current + dt.timedelta(minutes=3))
     image_url = None
     try:

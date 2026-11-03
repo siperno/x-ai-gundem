@@ -8,12 +8,39 @@ import share_news_2026_11_02 as news
 
 
 class PublicationGuards(unittest.TestCase):
-    def test_late_missing_day_fails_without_buffer_access(self):
+    def test_delayed_run_schedules_fresh_content_once(self):
+        for hour in (7, 14, 20):
+            moment = dt.datetime(2026, 11, 3, hour, 40, tzinfo=p.UTC)
+            records = {}
+            calls = []
+            def put(path, data, sha=None):
+                if path.startswith('state/'):
+                    records[path] = p.json.loads(data)
+                return {'content': {'sha': 'sha'}, 'commit': {'sha': 'commit'}}
+            def gql(query, variables):
+                self.assertEqual(records['state/2026-11-03.json']['status'], 'attempting')
+                calls.append(variables['input'])
+                return {'createPost': {'post': {'id': 'post1', 'status': 'scheduled'}}}
+            with self.subTest(hour=hour), tempfile.TemporaryDirectory() as folder:
+                with patch.dict(p.os.environ, RUN_MODE='publish'), patch.object(p, 'now', return_value=moment), patch.object(p, 'get_file', return_value=(None, None)), patch.object(p, 'channel', return_value=('org', 'channel')), patch.object(p, 'news', return_value=[]) as collect, patch.object(p, 'repositories', return_value=[]), patch.object(p, 'make_card', side_effect=lambda repos, end, path: (Path(folder) / path).write_bytes(b'image')), patch.object(p, 'Path', side_effect=lambda value: Path(folder) / value), patch.object(p, 'put_file', side_effect=put), patch.object(p, 'request'), patch.object(p, 'gql', side_effect=gql):
+                    p.run()
+                    collect.assert_called_once_with(moment)
+                    self.assertEqual(len(calls), 1)
+                    self.assertEqual(calls[0]['dueAt'], (moment + dt.timedelta(minutes=3)).isoformat())
+                    self.assertEqual(records['state/2026-11-03.json']['status'], 'scheduled')
+                    with patch.object(p, 'get_file', return_value=(records['state/2026-11-03.json'], 'sha')):
+                        p.gate()
+                    self.assertEqual(len(calls), 1)
+
+    def test_late_missing_day_proceeds(self):
         moment = dt.datetime(2026, 11, 2, 16, tzinfo=p.UTC)
         with patch.dict(p.os.environ, RUN_MODE='publish'), patch.object(p, 'now', return_value=moment), patch.object(p, 'get_file', return_value=(None, None)), patch.object(p, 'channel') as channel:
-            with self.assertRaises(RuntimeError):
-                p.gate()
-            channel.assert_not_called()
+            with tempfile.TemporaryDirectory() as folder:
+                output = Path(folder) / 'output'
+                with patch.dict(p.os.environ, GITHUB_OUTPUT=str(output)):
+                    p.gate()
+                self.assertEqual(output.read_text(), 'proceed=true\n')
+            channel.assert_called_once()
 
     def test_late_completed_day_is_safe_noop(self):
         moment = dt.datetime(2026, 11, 2, 16, tzinfo=p.UTC)

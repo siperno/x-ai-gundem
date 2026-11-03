@@ -8,8 +8,10 @@ Mac kapalıyken GitHub ve Buffer sunucularında çalışır. Ücretli AI API'si 
 Hazırlık her gün **07:47 Europe/Berlin**, yedek deneme **08:12**. Buffer hedef yayın saati **08:30**.
 **09:45** kontrolü Buffer'ın `sent` teslim durumunu doğrular; eksik/hatalı yayında Actions çalışması hata verir.
 IANA saat dilimi ve Python zoneinfo yaz/kış saatini otomatik uygular.
-GitHub Actions kesin zaman garantisi vermez: geç başlayan çalışma 09:30'a kadar güncel verilerle
-3 dakika sonrasına zamanlanır. Daha geçse yayın yapılmaz. 08:30'dan sonra başlayan koşu geç yayınlanır.
+GitHub Actions kesin zaman garantisi vermez. Geç başlayan çalışma güncel verileri yeniden toplar ve
+aynı günün yayını yoksa 3 dakika sonrasına zamanlar; 09:30 kesme saati yoktur.
+08:30 hedefi korunur, geciken koşular geç yayınlanır. Hazırlık sırasında Berlin tarihi değişirse
+eski günün içeriği gönderilmez; yeni gün için yeniden çalışma gerekir.
 Haber penceresi hazırlık anından geriye tam 24 saattir; hazırlık ile 08:30 arasındaki haberleri kapsamaz.
 
 ## İçerik ve doğrulamanın kapsamı
@@ -46,7 +48,7 @@ Actions → AI gündemi → Run workflow:
 - `check`: kanal ve okuma yetkilerini doğrular, yayın oluşturmaz.
 - `preview`: haber, çeviri ve kart oluşturur; yalnızca 3 günlük artifact kaydeder.
 - `draft`: içeriği Buffer'a yayınlanmayan taslak olarak göndererek yazma/görsel/zincir uyumunu test eder.
-- `publish`: yalnızca 07:30–09:30 Berlin aralığında bugünkü yayını zamanlar.
+- `publish`: bugünkü yayını 08:30'a, hedef saat geçtiyse 3 dakika sonrasına zamanlar.
 - `verify`: bugünkü Buffer gönderisinin teslim durumunu kontrol eder.
 
 Otomatik schedule aktiftir; secret hazır olduğunda sonraki sabah çalışır.
@@ -82,3 +84,4 @@ Sıfır ücret, hizmetlerin ücretsiz plan ve politikaları sürdüğü sürece 
 - https://argos-translate.readthedocs.io/en/stable/index.html
 
 Yerel test: `python -m unittest -v`. Testler ağ erişimi veya anahtar gerektirmez.
+
