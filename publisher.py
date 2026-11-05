@@ -113,6 +113,11 @@ def gate():
         return
     moment = now()
     due = target_time(moment)
+    # Fail closed when a scheduled run starts outside the morning window.
+    # Manual workflow_dispatch remains available when the user explicitly requests an immediate post.
+    if mode == 'publish' and os.environ.get('GITHUB_EVENT_NAME') == 'schedule':
+        if not (due - dt.timedelta(hours=2) <= moment <= due + dt.timedelta(minutes=30)):
+            raise RuntimeError('Zamanlanmış koşu 06:30–09:00 Berlin penceresi dışında; geç otomatik yayın engellendi')
     state, _ = get_file(f'state/{due.date()}.json')
     if mode == 'publish' and state:
         if state['status'] in ('scheduled', 'sent'):
@@ -310,6 +315,9 @@ def run():
         return
     # Delayed runners prepare fresh content for today instead of missing the day.
     current = now()
+    if mode == 'publish' and os.environ.get('GITHUB_EVENT_NAME') == 'schedule':
+        if current > due + dt.timedelta(minutes=30):
+            raise RuntimeError('İçerik hazırlığı 09:00 sınırını aştı; geç otomatik yayın engellendi')
     if mode == 'publish' and current.astimezone(BERLIN).date() != due.date():
         raise RuntimeError('Hazırlık sırasında Berlin tarihi değişti; yeni gün için yeniden hazırlayın')
     publish_at = max(due.astimezone(UTC), current + dt.timedelta(minutes=3))
