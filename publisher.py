@@ -273,7 +273,7 @@ def build_posts(items, repos, end, translate):
         prefix = item['source'] + ' duyurusu' if item['language'] == 'en' else item['source'] + ' haberi'
         posts.append(f"{prefix}:\n{clip(item['title_tr'], 170)}\n{item['url']}")
     if not items:
-        posts.append('Kontrol edilen kaynaklarda son 24 saat için tarih ve bağlantı kontrollerini geçen yeni AI haberi bulunamadı. Eski haberleri yeniymiş gibi paylaşmıyorum.')
+        raise RuntimeError('Doğrulanmış güncel AI haberi yok; X için içerik oluşturulmadı.')
     for r in repos:
         posts.append(f"GitHub keşfi: {r['name']}\n{r['stars']:,} yıldız · {r['language']}\nAI etiketli, son 30 günde kod güncellemesi olan repo. Yıldızlar toplam sayıdır.\n{r['url']}")
     # Conservative bound: every non-ASCII code point counts double, URL counts 23.
@@ -301,6 +301,9 @@ def run():
         raise RuntimeError('Günlük kayıt mevcut; tekrarlı yayın engellendi')
     org, cid = channel()
     items = news(end)
+    if not items:
+        print('SKIP: Son 24 saatte doğrulanmış yeni AI haberi yok. Buffer/X gönderisi oluşturulmadı.')
+        return
     repos = repositories(end)
     tr = translator() if any(i['language'] == 'en' for i in items) else lambda x: x
     posts = build_posts(items, repos, end, tr)
