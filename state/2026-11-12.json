@@ -1,1 +1,1 @@
-{"date": "2026-11-12", "status": "attempting", "due_at": "2026-11-12T07:42:01.790489+00:00", "digest": "ba9b96a3f31cbd3a9f92d8889c16db14ac887146efd38e934522ce96cd577fdb", "run_id": null}
+{"date": "2026-11-12", "status": "scheduled", "due_at": "2026-11-12T07:42:01.790489+00:00", "digest": "ba9b96a3f31cbd3a9f92d8889c16db14ac887146efd38e934522ce96cd577fdb", "run_id": null, "post_id": "6af56d1925c368b67207a783"}
