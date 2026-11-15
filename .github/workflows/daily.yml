@@ -1,12 +1,6 @@
 name: AI gündemi — Berlin 08.30
 on:
-  schedule:
-    - cron: '47 7 * * *'
-      timezone: Europe/Berlin
-    - cron: '12 8 * * *'
-      timezone: Europe/Berlin
-    - cron: '45 9 * * *'
-      timezone: Europe/Berlin
+  # Automatic schedule paused at user's request; manual dispatch remains available.
   workflow_dispatch:
     inputs:
       mode:
